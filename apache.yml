@@ -1,8 +1,0 @@
----
-- name: webserver initialization
-  hosts: localhost
-  gather_facts: true
-  become: yes
-  roles:
-     - { role: apache_setup }
-	 
