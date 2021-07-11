@@ -1,0 +1,90 @@
+---
+- hosts: localhost
+  become: yes
+  tasks:
+
+    - name: Disk usage before clean up
+      shell:
+        du -skh /tmp
+      register: du_before_cleanup
+
+    - debug:
+        msg: "The size utilized in /tmp before clean up {{ du_before_cleanup.stdout }}"
+
+    - name: No of files older than 3 days
+      shell:
+        find /tmp -mtime +3 |wc -l
+      register: file_count
+
+    - name: List no of files older than 3 days
+      shell:
+        find /tmp -mtime +3
+      register: file_listing
+
+    - debug:
+        msg: "The list of files older than 3 days before clean up is {{ file_listing.stdout }}"
+
+    - name: Remove files older than 3 days
+      shell:
+        sudo find /tmp -mtime +3 |xargs rm -Rf
+
+    - debug:
+        msg: "The number of files older than 3 days = {{ file_count.stdout }}"
+
+    - name: Register file which are older than 3 days
+      find:
+        paths: "/tmp/"
+        age: "3d"
+      register: files_to_delete
+
+    - debug:
+        msg: "{{ item.path }}"
+      with_items: "{{ files_to_delete.files }}"
+
+    - debug:
+        msg: "{{ item.size }}"
+      with_items: "{{ files_to_delete.files }}"
+
+    - name: Remove files older than 3 days
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ files_to_delete.files }}"
+
+    - name: Disk usage after clean up
+      shell:
+        du -skh /tmp
+      register: du_after_cleanup
+
+    - debug:
+        msg: "The disk utilization after clean up is {{ du_after_cleanup.stdout }}"
+
+    - name: Register file which are older than 3 days which was not cleaned up
+      find:
+        paths: /tmp/
+        age: 3d
+        recurse: yes
+      register: retained_files
+
+    - debug:
+        msg: "{{ item.path }}"
+      with_items: "{{ retained_files.files }}"
+
+    - name: Register no of files older than 3 days which got retained even after clean up
+      shell:
+        find /tmp -mtime +3 |wc -l
+      register: file_count_retained
+
+    - name: List no of files older than 3 days
+      shell:
+        find /tmp -mtime +3
+      register: file_listing_post_cleanup
+
+    - debug:
+        msg: "The list of files older than 3 days before clean up is {{ file_listing_post_cleanup.stdout }}"
+
+    - debug:
+        msg: "The disk utilization after clean up is {{ du_after_cleanup.stdout }}"
+
+    - debug:
+        msg: "The number of files older than 3 days which got retained even after clean up = {{ file_count_retained.stdout }}"
