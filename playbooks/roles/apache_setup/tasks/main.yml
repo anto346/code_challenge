@@ -1,0 +1,46 @@
+---
+
+- name: Install a list of packages
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - httpd
+    - httpd-tools
+  delegate_to: '{{item}}'
+  loop: "{{ groups['webservers'] }}"
+  
+- name: Allow all access to tcp port 80
+  ufw:
+    rule: allow
+    port: 80
+    proto: tcp
+  delegate_to: '{{item}}'
+  loop: "{{ groups['webservers'] }}"
+  
+- name: Allow all access to tcp port 443
+  ufw:
+    rule: allow
+    port: 443
+    proto: tcp
+  delegate_to: '{{item}}'
+  loop: "{{ groups['webservers'] }}"
+  
+- name: Template a file
+  ansible.builtin.template:
+    src: /home/automation/plays/roles/apache_setup/templates/index.html.j2
+    dest:  /var/www/html/index.html
+    owner: bin
+    group: wheel
+    mode: '0644'
+  delegate_to: '{{item}}'
+  loop: "{{ groups['webservers'] }}"
+  
+- name: Start service httpd
+  ansible.builtin.service:
+    name: httpd
+    state: started
+  delegate_to: '{{item}}'
+  loop: "{{ groups['webservers'] }}"	
+	
+
